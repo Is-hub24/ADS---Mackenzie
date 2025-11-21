@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Descarte Responsável — Nova Interface</title>
+  <meta name="description" content="Página demo para registro e localização de pontos de descarte de resíduos." />
+
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --muted:#98a0b3;
+      --accent:#16a34a; /* verde */
+      --danger:#ef4444;
+      --glass: rgba(255,255,255,0.04);
+      --radius:14px;
+      --container:1100px;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; padding:24px; background:linear-gradient(180deg,#071021 0%, #081428 60% ); color:#e6eef7; -webkit-font-smoothing:antialiased;
+    }
+
+    .wrap{max-width:var(--container); margin:0 auto}
+
+    header{
+      display:flex; align-items:center; gap:16px; justify-content:space-between; margin-bottom:28px;
+    }
+    .brand{display:flex; align-items:center; gap:12px}
+    .logo{
+      width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,#16a34a 0%, #06b6d4 100%); display:grid; place-items:center; font-weight:800; color:white; font-size:18px;
+      box-shadow: 0 6px 20px rgba(2,6,23,0.6);
+    }
+    h1{font-size:20px; margin:0}
+    p.lead{margin:0; color:var(--muted); font-size:13px}
+
+    nav{display:flex; gap:12px}
+    .btn{background:var(--glass); padding:10px 14px; border-radius:10px; color:var(--muted); border:1px solid rgba(255,255,255,0.03); cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,var(--accent),#06b6d4); color:#021218; font-weight:700}
+
+    main{display:grid; grid-template-columns:1fr 420px; gap:24px}
+
+    /* Left: content */
+    .hero{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); padding:22px; border-radius:18px}
+    .hero .search{display:flex; gap:12px; margin-bottom:14px}
+    .input, textarea, select{background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); color:inherit; padding:10px 12px; border-radius:10px; width:100%}
+    .controls{display:flex; gap:8px}
+
+    .cards{display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); margin-top:14px}
+    .card{background:var(--card); padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,0.03); box-shadow:0 6px 18px rgba(2,6,23,0.6);}
+    .card h3{margin:0 0 6px 0; font-size:15px}
+    .meta{color:var(--muted); font-size:13px}
+    .tag{display:inline-block; padding:6px 8px; border-radius:999px; font-size:12px; background:rgba(255,255,255,0.03); margin-right:6px}
+
+    .empty{padding:34px; text-align:center; color:var(--muted)}
+
+    /* Right: sidebar */
+    aside{position:relative}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); padding:16px; border-radius:14px}
+    .map{height:220px; border-radius:10px; background:linear-gradient(180deg,#052035,#083049); display:grid; place-items:center; color:var(--muted); margin-bottom:12px}
+    .stats{display:flex; gap:12px; justify-content:space-between}
+    .stat{flex:1; background:var(--glass); padding:10px; border-radius:12px; text-align:center}
+    .stat strong{display:block; font-size:18px}
+
+    footer{margin-top:18px; text-align:center; color:var(--muted); font-size:13px}
+
+    /* modal */
+    .modal{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,0.6); z-index:60}
+    .modal.open{display:flex}
+    .dialog{width:min(760px,96%); background:linear-gradient(180deg,#071428,#071b2a); padding:18px; border-radius:16px}
+
+    /* responsive */
+    @media (max-width:980px){ main{grid-template-columns:1fr} aside{order:2} }
+
+    /* small touches */
+    .fav{cursor:pointer; font-size:18px}
+    .chip{display:inline-block; padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">🚮</div>
+        <div>
+          <h1>Descarte Responsável</h1>
+          <p class="lead">Encontre e registre pontos de coleta perto de você — interface atualizada.</p>
+        </div>
+      </div>
+
+      <nav>
+        <button class="btn" id="btn-theme">Tema</button>
+        <button class="btn primary" id="btn-report">Cadastrar Ponto</button>
+      </nav>
+    </header>
+
+    <main>
+      <section>
+        <div class="hero">
+          <div class="search">
+            <input id="q" class="input" placeholder="Pesquisar por endereço, cidade, tipo de resíduo..." />
+            <select id="filter" class="input" style="width:170px">
+              <option value="all">Todos os tipos</option>
+              <option value="reciclavel">Reciclável</option>
+              <option value="organico">Orgânico</option>
+              <option value="eletronico">Elétronicos</option>
+              <option value="perigoso">Perigoso</option>
+            </select>
+            <button class="btn" id="btn-search">Buscar</button>
+          </div>
+
+          <div class="controls">
+            <div class="chip" id="count">0 pontos</div>
+            <div style="flex:1"></div>
+            <button class="btn" id="btn-clear">Limpar filtros</button>
+          </div>
+
+          <div id="results" class="cards" aria-live="polite">
+            <!-- cards renderizados aqui -->
+          </div>
+
+          <div id="empty" class="empty" style="display:none">
+            Nenhum ponto encontrado. Seja o primeiro a cadastrar: clique em "Cadastrar Ponto".
+          </div>
+        </div>
+
+        <footer>
+          Dados de exemplo — personalize com os pontos do seu repositório e/ou API.
+        </footer>
+      </section>
+
+      <aside>
+        <div class="panel">
+          <div class="map" id="map">Mapa (placeholder)</div>
+          <div class="stats">
+            <div class="stat"><small>Registros</small><strong id="stat-total">0</strong></div>
+            <div class="stat"><small>Favoritos</small><strong id="stat-fav">0</strong></div>
+            <div class="stat"><small>Cidades</small><strong id="stat-cities">0</strong></div>
+          </div>
+
+          <hr style="margin:12px 0; border-color:rgba(255,255,255,0.03)" />
+          <p style="margin:0; color:var(--muted); font-size:13px">Dicas:</p>
+          <ul style="color:var(--muted); font-size:13px">
+            <li>Use o botão "Cadastrar Ponto" para abrir o formulário.</li>
+            <li>Marque favoritos para fácil acesso.</li>
+            <li>Substitua o componente "map" por um mapa real (Leaflet, Mapbox ou Google Maps).</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Modal: cadastrar / detalhes -->
+  <div class="modal" id="modal">
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2 id="modal-title">Cadastrar Ponto</h2>
+      <form id="form-point" style="display:grid; gap:10px; margin-top:10px">
+        <div style="display:flex; gap:8px">
+          <input name="name" required placeholder="Nome do local" class="input" />
+          <input name="city" required placeholder="Cidade" class="input" />
+        </div>
+        <input name="address" required placeholder="Endereço (rua, número)" class="input" />
+        <div style="display:flex; gap:8px">
+          <select name="type" required class="input">
+            <option value="reciclavel">Reciclável</option>
+            <option value="organico">Orgânico</option>
+            <option value="eletronico">Eletrônico</option>
+            <option value="perigoso">Perigoso</option>
+          </select>
+          <input name="phone" placeholder="Telefone (opcional)" class="input" />
+        </div>
+        <textarea name="notes" placeholder="Observações (horário, restrições)" rows="3" class="input"></textarea>
+
+        <div style="display:flex; gap:8px; justify-content:flex-end">
+          <button type="button" class="btn" id="btn-cancel">Cancelar</button>
+          <button type="submit" class="btn primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /* Código JavaScript: renderização, busca, storage e interação */
+    const SAMPLE = [
+      {id:1, name:'Cooperativa Recicla+','city':'São Paulo','address':'Av. Paulista, 1000','type':'reciclavel','notes':'Aceita plástico, vidro e papel.'},
+      {id:2, name:'Ponto Verde Porto','city':'Porto Alegre','address':'R. das Flores, 45','type':'organico','notes':'Compostagem no local.'},
+      {id:3, name:'ElectroCenter','city':'Campinas','address':'Av. Central, 200','type':'eletronico','notes':'Peças pequenas e celulares.'},
+    ];
+
+    const state = {
+      points: [],
+      q: '',
+      filter: 'all',
+      favorites: new Set(JSON.parse(localStorage.getItem('favPoints')||'[]'))
+    }
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', ()=>{
+      // carregar amostra (substituir por fetch da sua API ou do repositório)
+      state.points = loadPointsFromStorage() || SAMPLE.slice();
+      renderList();
+      attachEvents();
+      updateStats();
+    })
+
+    function loadPointsFromStorage(){
+      try{ const s = localStorage.getItem('points_v1'); return s? JSON.parse(s): null }catch(e){return null}
+    }
+    function savePointsToStorage(){ localStorage.setItem('points_v1', JSON.stringify(state.points)) }
+
+    function attachEvents(){
+      document.getElementById('btn-report').addEventListener('click', ()=>openModal('Cadastrar Ponto'))
+      document.getElementById('btn-search').addEventListener('click', applyFilters)
+      document.getElementById('q').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ applyFilters() } })
+      document.getElementById('btn-clear').addEventListener('click', ()=>{ document.getElementById('q').value=''; document.getElementById('filter').value='all'; state.q=''; state.filter='all'; renderList() })
+      document.getElementById('btn-cancel').addEventListener('click', closeModal)
+      document.getElementById('form-point').addEventListener('submit', onSubmitPoint)
+      document.getElementById('filter').addEventListener('change', (e)=>{ state.filter = e.target.value; renderList() })
+      document.getElementById('btn-theme').addEventListener('click', toggleTheme)
+    }
+
+    function applyFilters(){
+      state.q = document.getElementById('q').value.trim().toLowerCase();
+      state.filter = document.getElementById('filter').value;
+      renderList();
+    }
+
+    function renderList(){
+      const container = document.getElementById('results'); container.innerHTML='';
+      const filtered = state.points.filter(p=>{
+        if(state.filter !== 'all' && p.type !== state.filter) return false;
+        if(!state.q) return true;
+        const s = (p.name+' '+p.address+' '+p.city+' '+p.notes+' '+p.type).toLowerCase();
+        return s.includes(state.q);
+      })
+
+      document.getElementById('count').textContent = `${filtered.length} pontos`;
+      document.getElementById('empty').style.display = filtered.length? 'none': 'block';
+
+      for(const p of filtered){
+        const el = document.createElement('article'); el.className='card';
+        el.innerHTML = `
+          <div style="display:flex; justify-content:space-between; gap:8px">
+            <div>
+              <h3>${escapeHtml(p.name)}</h3>
+              <div class="meta">${escapeHtml(p.address)} — ${escapeHtml(p.city)}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="tag">${typeLabel(p.type)}</div>
+              <div style="margin-top:8px">
+                <button class="btn" data-id="${p.id}" data-action="details">Ver</button>
+                <button class="btn" data-id="${p.id}" data-action="fav">${state.favorites.has(p.id)? '★' : '☆'}</button>
+              </div>
+            </div>
+          </div>
+          <p style="margin-top:8px; color:var(--muted); font-size:13px">${escapeHtml(p.notes||'')}</p>
+        `;
+        container.appendChild(el);
+      }
+
+      // add event delegation
+      container.querySelectorAll('button').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          const id = Number(e.currentTarget.dataset.id);
+          const act = e.currentTarget.dataset.action;
+          if(act==='details') openDetails(id);
+          if(act==='fav') toggleFav(id)
+        })
+      })
+
+      updateStats();
+    }
+
+    function openDetails(id){
+      const p = state.points.find(x=>x.id===id); if(!p) return;
+      openModal('Detalhes do ponto');
+      const title = document.getElementById('modal-title'); title.textContent = p.name;
+      // preencher o formulário com dados para edição
+      const form = document.getElementById('form-point');
+      form.name.value = p.name; form.city.value = p.city; form.address.value = p.address; form.type.value = p.type; form.phone.value = p.phone||''; form.notes.value = p.notes||'';
+      form.dataset.editId = id;
+    }
+
+    function toggleFav(id){
+      if(state.favorites.has(id)) { state.favorites.delete(id) }
+      else state.favorites.add(id);
+      localStorage.setItem('favPoints', JSON.stringify(Array.from(state.favorites)))
+      renderList();
+    }
+
+    function updateStats(){
+      document.getElementById('stat-total').textContent = state.points.length;
+      document.getElementById('stat-fav').textContent = state.favorites.size;
+      const cities = new Set(state.points.map(p=>p.city)); document.getElementById('stat-cities').textContent = cities.size;
+    }
+
+    function openModal(title){
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal').classList.add('open');
+      // reset form for new
+      const form = document.getElementById('form-point'); form.reset(); delete form.dataset.editId;
+    }
+    function closeModal(){ document.getElementById('modal').classList.remove('open') }
+
+    function onSubmitPoint(e){
+      e.preventDefault(); const form = e.target;
+      const data = new FormData(form);
+      const obj = { name: data.get('name'), city: data.get('city'), address: data.get('address'), type: data.get('type'), phone: data.get('phone'), notes: data.get('notes') };
+      if(form.dataset.editId){
+        // editar existente
+        const id = Number(form.dataset.editId); const idx = state.points.findIndex(x=>x.id===id);
+        if(idx>=0){ state.points[idx] = { ...state.points[idx], ...obj } }
+      } else {
+        const id = Date.now(); state.points.push({ id, ...obj });
+      }
+      savePointsToStorage(); renderList(); closeModal();
+    }
+
+    function toggleTheme(){
+      document.body.style.background = document.body.style.background?.includes('#071021') ? 'linear-gradient(180deg,#fff 0%, #f3f4f6 60%)' : 'linear-gradient(180deg,#071021 0%, #081428 60% )';
+      document.body.style.color = document.body.style.color==='black'? '#e6eef7':'black';
+    }
+
+    function typeLabel(t){
+      switch(t){ case 'reciclavel': return '♻️ Reciclável'; case 'organico': return '🍃 Orgânico'; case 'eletronico': return '🔌 Eletrônico'; case 'perigoso': return '⚠️ Perigoso'; default: return t }
+    }
+
+    function escapeHtml(s){ if(!s && s!==0) return ''; return String(s).replace(/[&<>"'`]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;",'`':'&#96;'})[c]) }
+
+  </script>
+</body>
+</html>
